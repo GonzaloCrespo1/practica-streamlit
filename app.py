@@ -14,7 +14,29 @@ st.set_page_config(
     layout="wide",
 ) #esto no permite definir el título del navegador, el icono y usamos wide que nos permite aprovechar todo el ancho
 
+def read_csv_from_zip(zip_path: str) -> pd.DataFrame:
+    if not os.path.exists(zip_path):
+        st.error(f"No existe el archivo {zip_path} en el repo.")
+        st.stop()
 
+    with zipfile.ZipFile(zip_path, "r") as z:
+        infos = [i for i in z.infolist() if i.filename.lower().endswith(".csv")]
+
+        # DEBUG útil: ver qué hay dentro
+        if not infos:
+            st.error(f"{zip_path} NO contiene ningún .csv. Contenido: {z.namelist()[:50]}")
+            st.stop()
+
+        # Elegimos el CSV más grande (normalmente el dataset real)
+        best = max(infos, key=lambda i: i.file_size)
+
+        if best.file_size == 0:
+            st.error(f"El CSV dentro de {zip_path} está vacío: {best.filename}")
+            st.stop()
+
+        with z.open(best) as f:
+            # Leemos directamente el CSV del zip (sin extraer a disco)
+            return pd.read_csv(f, low_memory=False)
 
 #####################################################################
 
@@ -24,18 +46,8 @@ st.set_page_config(
 @st.cache_data #sirve para que streamlit no lea de nuevo los csv cada vez que movemos algún filtro en la página (ganamos en velocidad)
 def load_data():
    
-   # --- Si estamos en Streamlit Cloud y los CSV no están, los sacamos de los ZIP ---
-    if (not os.path.exists("parte_1.csv")) and os.path.exists("parte_1.zip"):
-        with zipfile.ZipFile("parte_1.zip", "r") as z:
-            z.extractall(".")  # extrae en la carpeta del proyecto
-
-    if (not os.path.exists("parte_2.csv")) and os.path.exists("parte_2.zip"):
-        with zipfile.ZipFile("parte_2.zip", "r") as z:
-            z.extractall(".")
-   
-   
-    df1 = pd.read_csv("parte_1.csv", low_memory=False)
-    df2 = pd.read_csv("parte_2.csv", low_memory=False)
+    df1 = read_csv_from_zip("parte_1.zip")
+    df2 = read_csv_from_zip("parte_2.zip")
     df = pd.concat([df1, df2], ignore_index=True)
     
     # Hemos usado pandas para cargar los archivos csv y los pega
