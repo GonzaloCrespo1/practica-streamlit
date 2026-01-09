@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import streamlit as st
-
+import os
+import zipfile
 
 """
 Aquí definimos la configuración general de la página
@@ -22,6 +23,16 @@ st.set_page_config(
 
 @st.cache_data #sirve para que streamlit no lea de nuevo los csv cada vez que movemos algún filtro en la página (ganamos en velocidad)
 def load_data():
+   
+   # --- Si estamos en Streamlit Cloud y los CSV no están, los sacamos de los ZIP ---
+    if (not os.path.exists("parte_1.csv")) and os.path.exists("parte_1.zip"):
+        with zipfile.ZipFile("parte_1.zip", "r") as z:
+            z.extractall(".")  # extrae en la carpeta del proyecto
+
+    if (not os.path.exists("parte_2.csv")) and os.path.exists("parte_2.zip"):
+        with zipfile.ZipFile("parte_2.zip", "r") as z:
+            z.extractall(".")
+   
    
     df1 = pd.read_csv("parte_1.csv", low_memory=False)
     df2 = pd.read_csv("parte_2.csv", low_memory=False)
